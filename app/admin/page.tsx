@@ -1054,7 +1054,7 @@ export default function AdminPage() {
                 © 2025 MeetupMN. Бүх эрх хуулиар хамгаалагдсан.
               </p>
             </div>
-            <div className="flex gap-6">
+            {/* <div className="flex gap-6">
               <Link href="/about" className="text-gray-500 hover:text-gray-900">
                 Бидний тухай
               </Link>
@@ -1073,7 +1073,7 @@ export default function AdminPage() {
               >
                 Холбоо барих
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </footer>

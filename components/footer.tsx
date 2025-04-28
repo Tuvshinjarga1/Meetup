@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -9,9 +9,12 @@ export function Footer() {
             <Link href="/" className="text-xl font-bold">
               MeetupMN
             </Link>
-            <p className="text-gray-500 mt-1">© {new Date().getFullYear()} MeetupMN. Бүх эрх хуулиар хамгаалагдсан.</p>
+            <p className="text-gray-500 mt-1">
+              © {new Date().getFullYear()} MeetupMN. Бүх эрх хуулиар
+              хамгаалагдсан.
+            </p>
           </div>
-          <div className="flex gap-6">
+          {/* <div className="flex gap-6">
             <Link href="/about" className="text-gray-500 hover:text-gray-900">
               Бидний тухай
             </Link>
@@ -24,9 +27,9 @@ export function Footer() {
             <Link href="/contact" className="text-gray-500 hover:text-gray-900">
               Холбоо барих
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>
-  )
+  );
 }
