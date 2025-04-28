@@ -57,16 +57,18 @@ export default function Login() {
     setError("");
 
     try {
-      // Special case for admin login
-      if (formData.email === "admin@gmail.com" && formData.role === "admin") {
-        router.push("/admin");
-      } else {
-        setIsLoading(true);
-        await login(formData.email, formData.password);
+      setIsLoading(true);
+      await login(formData.email, formData.password);
 
-        // Use the redirect path from URL parameter if available
-        const redirectPath = getRedirectPath();
-        router.push(redirectPath);
+      // Use the redirect path from URL parameter if available
+      const redirectPath = getRedirectPath();
+      router.push(redirectPath);
+
+      if (
+        formData.email === "admin@gmail.com" &&
+        formData.password === "1234qwer"
+      ) {
+        router.push("/admin");
       }
     } catch (err: any) {
       console.error(err);
@@ -117,24 +119,6 @@ export default function Login() {
                 value={formData.email}
                 onChange={handleChange}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Эрх</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Эрхээ сонгоно уу" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Хэрэглэгч</SelectItem>
-                  <SelectItem value="admin">Админ</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">
