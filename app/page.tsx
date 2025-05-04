@@ -172,11 +172,11 @@ export default function Home() {
 
       <main className="flex-1">
         <section className="py-16 container">
-          <img
+          {/* <img
             src="https://i.ibb.co/p6ZVfCbK/background.jpg"
             alt="MeetupMN"
             className="w-auto mb-4 rounded-3xl"
-          />
+          /> */}
 
           <div className="flex justify-between items-center mb-12">
             <h2 className="text-3xl font-bold">

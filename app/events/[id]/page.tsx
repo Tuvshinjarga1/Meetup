@@ -891,16 +891,18 @@ export default function EventPage(props: { params: Promise<PageParams> }) {
 
                 <div className="flex flex-wrap gap-2">
                   {attendees.slice(0, 12).map((attendee) => (
-                    <Avatar key={attendee.id} className="h-8 w-8">
-                      <AvatarImage
-                        src={attendee.photoURL || undefined}
-                        alt={attendee.displayName || "User"}
-                      />
-                      <AvatarFallback>
-                        {attendee.displayName?.charAt(0) ||
-                          attendee.id.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <Link href={`/profile/${attendee.id}`} key={attendee.id}>
+                      <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                        <AvatarImage
+                          src={attendee.photoURL || undefined}
+                          alt={attendee.displayName || "User"}
+                        />
+                        <AvatarFallback>
+                          {attendee.displayName?.charAt(0) ||
+                            attendee.id.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
                   ))}
 
                   {attendees.length > 12 && (

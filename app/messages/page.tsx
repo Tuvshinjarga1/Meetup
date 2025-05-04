@@ -22,6 +22,7 @@ import {
   subscribeToCall,
   type CallData,
 } from "@/lib/call-service";
+import Link from "next/link";
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -236,16 +237,21 @@ export default function MessagesPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <Avatar>
-                          <AvatarImage
-                            src={chat.user.photoURL || undefined}
-                            alt={chat.user.displayName || "User"}
-                          />
-                          <AvatarFallback>
-                            {chat.user.displayName?.charAt(0) ||
-                              chat.userId.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <Link
+                          href={`/profile/${chat.userId}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                            <AvatarImage
+                              src={chat.user.photoURL || undefined}
+                              alt={chat.user.displayName || "User"}
+                            />
+                            <AvatarFallback>
+                              {chat.user.displayName?.charAt(0) ||
+                                chat.userId.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Link>
                         {chat.unread > 0 && (
                           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
                             {chat.unread}
@@ -254,9 +260,15 @@ export default function MessagesPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-center">
-                          <h3 className="font-medium truncate">
-                            {chat.user.displayName || "Хэрэглэгч"}
-                          </h3>
+                          <Link
+                            href={`/profile/${chat.userId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:underline"
+                          >
+                            <h3 className="font-medium truncate">
+                              {chat.user.displayName || "Хэрэглэгч"}
+                            </h3>
+                          </Link>
                           <span className="text-xs text-muted-foreground">
                             {chat.timestamp?.toDate
                               ? new Date(
@@ -296,20 +308,27 @@ export default function MessagesPage() {
               <>
                 <div className="p-4 border-b flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage
-                        src={selectedChatUser?.photoURL || undefined}
-                        alt={selectedChatUser?.displayName || "User"}
-                      />
-                      <AvatarFallback>
-                        {selectedChatUser?.displayName?.charAt(0) ||
-                          selectedChat.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <Link href={`/profile/${selectedChat}`}>
+                      <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                        <AvatarImage
+                          src={selectedChatUser?.photoURL || undefined}
+                          alt={selectedChatUser?.displayName || "User"}
+                        />
+                        <AvatarFallback>
+                          {selectedChatUser?.displayName?.charAt(0) ||
+                            selectedChat.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
                     <div>
-                      <h3 className="font-medium">
-                        {selectedChatUser?.displayName || "Хэрэглэгч"}
-                      </h3>
+                      <Link
+                        href={`/profile/${selectedChat}`}
+                        className="hover:underline"
+                      >
+                        <h3 className="font-medium">
+                          {selectedChatUser?.displayName || "Хэрэглэгч"}
+                        </h3>
+                      </Link>
                     </div>
                   </div>
 

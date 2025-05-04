@@ -13,6 +13,7 @@ import {
 } from "@/lib/message-service";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Link from "next/link";
 
 type EventChatProps = {
   eventId: string;
@@ -127,51 +128,85 @@ export function EventChat({ eventId }: EventChatProps) {
             <p className="text-muted-foreground">Ачааллаж байна...</p>
           </div>
         ) : messages.length > 0 ? (
-          messages.map((message) => {
-            const isOwnMessage = message.user.id === user.uid;
-
-            return (
-              <div
-                key={message.id}
-                className={`flex ${
-                  isOwnMessage ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`flex items-end gap-2 max-w-[70%] ${
-                    isOwnMessage ? "flex-row-reverse text-right" : ""
-                  }`}
-                >
-                  <Avatar className="h-8 w-8">
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex gap-3 ${
+                msg.user.id === user?.uid ? "justify-end" : "justify-start"
+              }`}
+            >
+              {msg.user.id !== user?.uid && (
+                <Link href={`/profile/${msg.user.id}`}>
+                  <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
                     <AvatarImage
-                      src={message.user.photoURL || undefined}
-                      alt={message.user.displayName || "User"}
+                      src={msg.user.photoURL || undefined}
+                      alt={msg.user.displayName || "User"}
                     />
                     <AvatarFallback>
-                      {message.user.displayName?.charAt(0) ||
-                        message.user.id.charAt(0)}
+                      {msg.user.displayName?.charAt(0) || msg.user.id.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
+                </Link>
+              )}
 
-                  <div
-                    className={`p-2 rounded-lg ${
-                      isOwnMessage ? "bg-primary/10" : "bg-muted"
-                    }`}
+              <div
+                className={`max-w-[70%] p-3 rounded-lg ${
+                  msg.user.id === user?.uid
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
+                }`}
+              >
+                {msg.user.id !== user?.uid && (
+                  <Link
+                    href={`/profile/${msg.user.id}`}
+                    className="hover:underline"
                   >
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{message.user.displayName || "Хэрэглэгч"}</span>
-                      <span>
-                        {message.timestamp?.toDate
-                          ? message.timestamp.toDate().toLocaleString()
-                          : new Date().toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm mt-1">{message.text}</p>
-                  </div>
-                </div>
+                    <h4
+                      className={`text-sm font-medium mb-1 ${
+                        msg.user.id === user?.uid
+                          ? "text-primary-foreground"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {msg.user.displayName || "Хэрэглэгч"}
+                    </h4>
+                  </Link>
+                )}
+                <p>{msg.text}</p>
+                <p
+                  className={`text-xs mt-1 ${
+                    msg.user.id === user?.uid
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {msg.timestamp?.toDate
+                    ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                </p>
               </div>
-            );
-          })
+
+              {msg.user.id === user?.uid && (
+                <Link href={`/profile/${msg.user.id}`}>
+                  <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                    <AvatarImage
+                      src={msg.user.photoURL || undefined}
+                      alt={msg.user.displayName || "User"}
+                    />
+                    <AvatarFallback>
+                      {msg.user.displayName?.charAt(0) || msg.user.id.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              )}
+            </div>
+          ))
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-muted-foreground">
