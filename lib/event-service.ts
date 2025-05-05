@@ -33,6 +33,7 @@ export type EventData = {
   createdBy: string;
   createdAt: string;
   meetingActive?: boolean;
+  meetingUrl?: string;
   attendees: {
     [userId: string]: {
       status: "going" | "maybe" | "not-going";
@@ -46,29 +47,17 @@ export const createEvent = async (
   imageFile?: File
 ) => {
   try {
-    // Add event document to Firestore
     const eventRef = await addDoc(collection(db, "events"), {
       ...eventData,
       createdAt: serverTimestamp(),
-      attendees: {
-        [eventData.createdBy]: {
-          status: "going",
-          timestamp: new Date().toISOString(),
-        },
-      },
+      attendees: {},
     });
 
-    // If there's an image, upload it to ImgDB (через наш сервис)
     if (imageFile) {
-      // Оптимизаци хийх (шаардлагатай бол)
       const optimizedFile = await optimizeImage(imageFile);
-
-      // ImgDB руу хуулах (image-service ашиглаж байна)
       const imagePath = `events/${eventRef.id}`;
       const imageUrl = await uploadImage(optimizedFile, imagePath);
-
-      // Update event with image URL
-      await updateDoc(doc(db, "events", eventRef.id), { imageUrl });
+      await updateDoc(eventRef, { imageUrl });
     }
 
     return eventRef.id;
@@ -86,22 +75,15 @@ export const updateEvent = async (
   try {
     const eventRef = doc(db, "events", eventId);
 
-    // Update event document
     await updateDoc(eventRef, {
       ...eventData,
       updatedAt: serverTimestamp(),
     });
 
-    // If there's a new image, upload it to ImgDB
     if (imageFile) {
-      // Оптимизаци хийх (шаардлагатай бол)
       const optimizedFile = await optimizeImage(imageFile);
-
-      // ImgDB руу хуулах
       const imagePath = `events/${eventId}`;
       const imageUrl = await uploadImage(optimizedFile, imagePath);
-
-      // Update event with new image URL
       await updateDoc(eventRef, { imageUrl });
     }
 
@@ -112,18 +94,16 @@ export const updateEvent = async (
   }
 };
 
+// Хэрэглэгч зургаа устгах тохиолдолд
 export const deleteEvent = async (eventId: string) => {
   try {
-    // Get the event data to check if it has an image
     const eventDoc = await getDoc(doc(db, "events", eventId));
     const eventData = eventDoc.data() as EventData;
 
-    // If event has an image, delete it from ImgDB
     if (eventData && eventData.imageUrl) {
       await deleteImage(`events/${eventId}`);
     }
 
-    // Delete the event document from Firestore
     await deleteDoc(doc(db, "events", eventId));
     return true;
   } catch (error) {
@@ -134,7 +114,6 @@ export const deleteEvent = async (eventId: string) => {
 
 export const getEvent = async (eventId: string) => {
   try {
-    // Check if the eventId is valid
     if (!eventId || eventId === "create") {
       throw new Error("Invalid event ID");
     }
@@ -150,10 +129,8 @@ export const getEvent = async (eventId: string) => {
       ...eventDoc.data(),
     } as EventData;
 
-    // Локал зургийг шалгаж өөрчлөх
     if (eventData.imageUrl && eventData.imageUrl.startsWith("local://")) {
-      const localImageUrl = getImageFromStorage(eventData.imageUrl);
-      eventData.imageUrl = localImageUrl;
+      eventData.imageUrl = getImageFromStorage(eventData.imageUrl);
     }
 
     return eventData;
@@ -175,10 +152,6 @@ export const getEvents = async (filters?: {
     const eventsQuery = collection(db, "events");
     const constraints = [];
 
-    // We need to be careful about combining filters with ordering
-    // as this requires composite indexes in Firestore
-
-    // Apply filters
     if (filters?.eventType) {
       constraints.push(where("eventType", "==", filters.eventType));
     }
@@ -187,15 +160,12 @@ export const getEvents = async (filters?: {
       constraints.push(where("isOnline", "==", filters.isOnline));
     }
 
-    // Always order by date
     constraints.push(orderBy("date", "asc"));
 
-    // Apply limit if specified
     if (filters?.limit) {
       constraints.push(limit(filters.limit));
     }
 
-    // Create the query
     const q = query(eventsQuery, ...constraints);
     const querySnapshot = await getDocs(q);
 
@@ -204,11 +174,8 @@ export const getEvents = async (filters?: {
       ...doc.data(),
     })) as EventData[];
 
-    // If we need to filter by userId, we'll do it client-side
-    // to avoid the need for complex indexes
     if (filters?.userId) {
       if (filters.attending) {
-        // Events the user is attending
         events = events.filter(
           (event) =>
             event.attendees &&
@@ -216,12 +183,10 @@ export const getEvents = async (filters?: {
             event.attendees[filters.userId!].status === "going"
         );
       } else {
-        // Events created by the user
         events = events.filter((event) => event.createdBy === filters.userId);
       }
     }
 
-    // Apply search filter if provided (client-side filtering)
     if (filters?.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       events = events.filter(
@@ -234,7 +199,6 @@ export const getEvents = async (filters?: {
     return events;
   } catch (error) {
     console.error("Error getting events:", error);
-    // Return empty array instead of throwing to avoid breaking the UI
     return [];
   }
 };
@@ -271,8 +235,6 @@ export const getEventAttendees = async (eventId: string) => {
 
     const eventData = eventDoc.data() as EventData;
     const attendeeIds = Object.keys(eventData.attendees || {});
-
-    // Get user details for each attendee
     const attendees = [];
 
     for (const userId of attendeeIds) {
@@ -281,7 +243,6 @@ export const getEventAttendees = async (eventId: string) => {
         eventData.attendees[userId].status === "maybe"
       ) {
         const userDoc = await getDoc(doc(db, "users", userId));
-
         if (userDoc.exists()) {
           attendees.push({
             id: userId,

@@ -21,13 +21,15 @@ import {
   subscribeToIncomingCalls,
   subscribeToCall,
   type CallData,
-} from "@/lib/call-service";
+  initializeSocket,
+  disconnectSocket,
+} from "@/lib/socket-service";
 import Link from "next/link";
 
 export default function MessagesPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const initialChatId = searchParams.get("userId");
+  const initialChatId = searchParams?.get("userId") || null;
 
   const [selectedChat, setSelectedChat] = useState<string | null>(
     initialChatId
@@ -42,6 +44,57 @@ export default function MessagesPage() {
   // Call state
   const [activeCall, setActiveCall] = useState<CallData | null>(null);
   const [isOutgoingCall, setIsOutgoingCall] = useState(false);
+  const [isCallButtonDisabled, setIsCallButtonDisabled] = useState(false);
+
+  // Initialize socket.io when the user is available
+  useEffect(() => {
+    if (!user) return;
+
+    let socketInitialized = false;
+    let incomingCallUnsubscribe: (() => void) | null = null;
+
+    const setupSocket = async () => {
+      if (socketInitialized) return;
+
+      try {
+        setActiveCall(null);
+        setIsOutgoingCall(false);
+
+        await initializeSocket(user.uid);
+        console.log("Socket.io initialized for user:", user.uid);
+        socketInitialized = true;
+
+        incomingCallUnsubscribe = subscribeToIncomingCalls((call) => {
+          if (!call) return;
+
+          if (call.status === "pending") {
+            console.log("Incoming call detected:", call);
+            call.receiverId = user.uid;
+            setActiveCall(call);
+            setIsOutgoingCall(false);
+          }
+        });
+      } catch (error) {
+        console.error("Error initializing socket:", error);
+        socketInitialized = false;
+      }
+    };
+
+    setupSocket();
+
+    return () => {
+      if (incomingCallUnsubscribe) {
+        incomingCallUnsubscribe();
+      }
+
+      console.log("Cleaning up socket connection");
+      setTimeout(() => {
+        if (socketInitialized) {
+          disconnectSocket();
+        }
+      }, 500);
+    };
+  }, [user]);
 
   // Fetch user's chats
   useEffect(() => {
@@ -52,8 +105,6 @@ export default function MessagesPage() {
         const userChats = await getUserChats(user.uid);
         setChats(userChats);
 
-        // If there's an initialChatId from URL and it's not in the chats list,
-        // we need to fetch that user's info and add it to the chats list
         if (
           initialChatId &&
           !userChats.find((chat) => chat.userId === initialChatId)
@@ -90,41 +141,55 @@ export default function MessagesPage() {
     return () => unsubscribe();
   }, [user, selectedChat]);
 
-  // Subscribe to incoming calls
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribe = subscribeToIncomingCalls(user.uid, (call) => {
-      if (call && call.status === "pending") {
-        setActiveCall(call);
-        setIsOutgoingCall(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
   // Subscribe to active call updates
   useEffect(() => {
-    if (!activeCall?.id) return;
+    if (!activeCall || !user) return;
 
-    const unsubscribe = subscribeToCall(activeCall.id, (updatedCall) => {
-      if (
-        !updatedCall ||
-        updatedCall.status === "ended" ||
-        updatedCall.status === "rejected"
-      ) {
-        // Give a small delay to show the ended/rejected state before closing modal
-        setTimeout(() => {
-          setActiveCall(null);
-        }, 2000);
-      } else {
-        setActiveCall(updatedCall);
+    console.log("Setting up call subscription for call:", activeCall);
+
+    const setupCallSubscription = async () => {
+      try {
+        await initializeSocket(user.uid);
+
+        const unsubscribe = subscribeToCall((updatedCall) => {
+          if (!updatedCall) return;
+
+          console.log("Call update received:", updatedCall.status);
+
+          if (
+            updatedCall.status === "ended" ||
+            updatedCall.status === "rejected"
+          ) {
+            setTimeout(() => {
+              setActiveCall(null);
+              setIsCallButtonDisabled(false);
+            }, 2000);
+          } else if (updatedCall.signalData) {
+            setActiveCall((prev) => ({
+              ...prev!,
+              status: updatedCall.status,
+              signalData: updatedCall.signalData,
+            }));
+          }
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error("Error setting up call subscription:", error);
+        return () => {};
       }
+    };
+
+    let unsubscribe: (() => void) | undefined;
+
+    setupCallSubscription().then((unsub) => {
+      unsubscribe = unsub;
     });
 
-    return () => unsubscribe();
-  }, [activeCall?.id]);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [activeCall, user]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -143,10 +208,31 @@ export default function MessagesPage() {
   };
 
   const handleVideoCall = async () => {
-    if (!user || !selectedChat) return;
+    if (!user || !selectedChat || isCallButtonDisabled) return;
+
+    setIsCallButtonDisabled(true);
+
     try {
+      console.log("Starting video call to:", selectedChat);
+      await initializeSocket(user.uid);
+
+      // Local video stream авах
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      // Local video харуулах
+      const localVideo = document.getElementById(
+        "local-video"
+      ) as HTMLVideoElement;
+      if (localVideo) {
+        localVideo.srcObject = localStream;
+      }
+
       const callId = await startCall(user.uid, selectedChat, "video");
-      // Subscribe to the call to get updates
+      console.log("Created call with ID:", callId);
+
       const call = {
         id: callId,
         callerId: user.uid,
@@ -160,14 +246,28 @@ export default function MessagesPage() {
       setIsOutgoingCall(true);
     } catch (error) {
       console.error("Error starting video call:", error);
+      alert("Дуудлага эхлүүлэхэд алдаа гарлаа. Дахин оролдоно уу.");
+      setIsCallButtonDisabled(false);
     }
   };
 
   const handleAudioCall = async () => {
-    if (!user || !selectedChat) return;
+    if (!user || !selectedChat || isCallButtonDisabled) return;
+
+    setIsCallButtonDisabled(true);
+
     try {
+      console.log("Starting audio call to:", selectedChat);
+      await initializeSocket(user.uid);
+
+      // Local audio stream авах
+      const localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
       const callId = await startCall(user.uid, selectedChat, "audio");
-      // Subscribe to the call to get updates
+      console.log("Created call with ID:", callId);
+
       const call = {
         id: callId,
         callerId: user.uid,
@@ -181,11 +281,15 @@ export default function MessagesPage() {
       setIsOutgoingCall(true);
     } catch (error) {
       console.error("Error starting audio call:", error);
+      alert("Дуудлага эхлүүлэхэд алдаа гарлаа. Дахин оролдоно уу.");
+      setIsCallButtonDisabled(false);
     }
   };
 
   const handleCallClose = () => {
+    console.log("Closing call modal");
     setActiveCall(null);
+    setIsCallButtonDisabled(false);
   };
 
   const selectedChatUser = chats.find(
@@ -306,7 +410,7 @@ export default function MessagesPage() {
           <div className="md:col-span-2 flex flex-col">
             {selectedChat ? (
               <>
-                <div className="p-4 border-b flex items-center justify-between">
+                <div className="p-4 border-b flex items-center justify-between z-50 relative">
                   <div className="flex items-center gap-3">
                     <Link href={`/profile/${selectedChat}`}>
                       <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
@@ -442,7 +546,33 @@ export default function MessagesPage() {
           call={activeCall}
           isIncoming={!isOutgoingCall}
           onClose={handleCallClose}
-        />
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div className="relative">
+              <video
+                id="local-video"
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full rounded-lg"
+              />
+              <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded">
+                Та
+              </div>
+            </div>
+            <div className="relative">
+              <video
+                id="remote-video"
+                autoPlay
+                playsInline
+                className="w-full h-full rounded-lg"
+              />
+              <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded">
+                {selectedChatUser?.displayName || "Хэрэглэгч"}
+              </div>
+            </div>
+          </div>
+        </CallModal>
       )}
 
       <Footer />

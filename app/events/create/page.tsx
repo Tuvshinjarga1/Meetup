@@ -1,8 +1,7 @@
 "use client";
 
 import type React from "react";
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +34,6 @@ import { MainNav } from "@/components/main-nav";
 import { Footer } from "@/components/footer";
 import { useAuth } from "@/contexts/auth-context";
 import { createEvent } from "@/lib/event-service";
-import { getImageFromStorage } from "@/lib/image-service";
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -51,6 +49,7 @@ export default function CreateEventPage() {
     isOnline: false,
     eventType: "",
     image: null as File | null,
+    meetingUrl: "", // ✅ ADD THIS
   });
 
   const handleChange = (
@@ -64,8 +63,6 @@ export default function CreateEventPage() {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setFormData((prev) => ({ ...prev, image: file }));
-
-      // Create a preview URL for the image
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -77,7 +74,6 @@ export default function CreateEventPage() {
   const removeImage = () => {
     setFormData((prev) => ({ ...prev, image: null }));
     setImagePreview(null);
-    // Reset the file input
     const fileInput = document.getElementById("image") as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
@@ -101,6 +97,11 @@ export default function CreateEventPage() {
       return;
     }
 
+    if (formData.isOnline && !formData.meetingUrl.trim()) {
+      alert("Google Meet холбоос оруулна уу");
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -113,6 +114,7 @@ export default function CreateEventPage() {
         isOnline: formData.isOnline,
         eventType: formData.eventType,
         createdBy: user.uid,
+        meetingUrl: formData.meetingUrl || undefined, // ✅ ADD THIS
       };
 
       await createEvent(eventData, formData.image || undefined);
@@ -128,11 +130,9 @@ export default function CreateEventPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <MainNav />
-
       <main className="flex-1 container py-8">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold mb-8">Шинэ эвент үүсгэх</h1>
-
           <Card>
             <CardHeader>
               <CardTitle>Эвентийн мэдээлэл</CardTitle>
@@ -260,8 +260,24 @@ export default function CreateEventPage() {
                         onChange={handleChange}
                       />
                     </div>
+                  </div>
+                )}
+
+                {formData.isOnline && (
+                  <div className="space-y-2">
+                    <Label htmlFor="meetingUrl">Google Meet холбоос</Label>
+                    <Input
+                      id="meetingUrl"
+                      name="meetingUrl"
+                      type="url"
+                      placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                      value={formData.meetingUrl}
+                      onChange={handleChange}
+                      required
+                    />
                     <p className="text-sm text-muted-foreground">
-                      Эвент болох газрын хаягийг оруулна уу
+                      Google Calendar-оор үүсгэсэн уулзалтын холбоосыг оруулна
+                      уу
                     </p>
                   </div>
                 )}
@@ -338,7 +354,6 @@ export default function CreateEventPage() {
           </Card>
         </div>
       </main>
-
       <Footer />
     </div>
   );

@@ -726,70 +726,34 @@ export default function EventPage(props: { params: Promise<PageParams> }) {
               </TabsContent>
 
               {event.isOnline && (
+                // Inside TabsContent value="video"
                 <TabsContent value="video" className="space-y-4">
                   {joinedMeeting ? (
                     <div className="border rounded-lg p-4 h-[500px] bg-gray-900 relative">
-                      <div
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-[400px] overflow-y-auto"
-                        ref={remoteVideosRef}
-                      >
-                        {/* Local video */}
-                        <div className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
-                          <video
-                            ref={localVideoRef}
-                            autoPlay
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute bottom-2 left-2 text-white text-sm bg-black/60 px-2 py-1 rounded">
-                            Та ({user?.displayName || "Хэрэглэгч"})
-                          </div>
+                      <div className="flex flex-col h-full">
+                        <div className="flex-1 flex items-center justify-center">
+                          {event.meetingUrl ? (
+                            <Button
+                              onClick={() =>
+                                window.open(event.meetingUrl, "_blank")
+                              }
+                              className="bg-white text-black px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                            >
+                              Google Meet-д нэгдэх
+                            </Button>
+                          ) : (
+                            <p className="text-white">Холбоос олдсонгүй</p>
+                          )}
                         </div>
-
-                        {/* Remote videos are dynamically added here */}
-                      </div>
-
-                      {/* Participants count */}
-                      <div className="absolute top-4 right-4 bg-black/60 px-3 py-1 rounded-full text-white text-sm">
-                        Оролцогч: {activeParticipants.length}
-                      </div>
-
-                      {/* Video controls */}
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-gray-800/80 px-6 py-3 rounded-full">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full bg-white/10 hover:bg-white/20"
-                          onClick={toggleAudio}
-                        >
-                          {audioEnabled ? (
-                            <MicIcon className="h-5 w-5 text-white" />
-                          ) : (
-                            <MicOffIcon className="h-5 w-5 text-red-500" />
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full bg-white/10 hover:bg-white/20"
-                          onClick={toggleVideo}
-                        >
-                          {videoEnabled ? (
-                            <VideoIcon className="h-5 w-5 text-white" />
-                          ) : (
-                            <VideoOffIcon className="h-5 w-5 text-red-500" />
-                          )}
-                        </Button>
-
-                        <Button
-                          variant="destructive"
-                          className="rounded-full"
-                          onClick={leaveMeeting}
-                        >
-                          Гарах
-                        </Button>
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                          <Button
+                            variant="destructive"
+                            className="rounded-full"
+                            onClick={leaveMeeting}
+                          >
+                            Гарах
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -798,15 +762,15 @@ export default function EventPage(props: { params: Promise<PageParams> }) {
                         <VideoIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium mb-2">
                           {isMeetingActive
-                            ? "Видео уулзалт идэвхтэй байна"
-                            : "Видео уулзалт эхлээгүй байна"}
+                            ? "Google Meet уулзалт идэвхтэй байна"
+                            : "Google Meet уулзалт эхлээгүй байна"}
                         </h3>
                         <p className="text-muted-foreground mb-4">
                           {isMeetingActive
                             ? "Уулзалтад нэгдэхийн тулд доорх товчийг дарна уу"
                             : user?.uid === event.createdBy
                             ? "Та зохион байгуулагч тул уулзалтыг эхлүүлэх боломжтой"
-                            : "Эвент эхлэх үед видео уулзалт идэвхжинэ"}
+                            : "Эвент эхлэх үед Google Meet уулзалт идэвхжинэ"}
                         </p>
                         <Button
                           onClick={handleStartMeeting}
@@ -823,9 +787,9 @@ export default function EventPage(props: { params: Promise<PageParams> }) {
                         </Button>
 
                         {user && rsvpStatus !== "going" && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Уулзалтад оролцохын тулд "Тийм" гэж RSVP-г сонгоно
-                            уу
+                          <p className="text-sm font-medium text-red-500 mt-2">
+                            Уулзалтад орохын тулд эхлээд "Тийм" гэж оролцохоо
+                            баталгаажуулна уу.
                           </p>
                         )}
                       </div>
