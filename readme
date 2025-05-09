@@ -1,0 +1,2 @@
+Эхлээд Socket.IO серверийг ажиллуулна: ---> pnpm socket:server
+Дараа нь Next.js аппликейшнийг ажиллуулна ---> pnpm dev

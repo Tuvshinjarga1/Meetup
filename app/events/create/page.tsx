@@ -114,7 +114,7 @@ export default function CreateEventPage() {
         isOnline: formData.isOnline,
         eventType: formData.eventType,
         createdBy: user.uid,
-        meetingUrl: formData.meetingUrl || undefined, // ✅ ADD THIS
+        ...(formData.meetingUrl && { meetingUrl: formData.meetingUrl }),
       };
 
       await createEvent(eventData, formData.image || undefined);

@@ -15,7 +15,7 @@ import {
   type MessageData,
 } from "@/lib/message-service";
 import { useSearchParams } from "next/navigation";
-import CallModal from "@/app/components/CallModal";
+import CallModal from "@/components/CallModal";
 import {
   startCall,
   subscribeToIncomingCalls,
@@ -45,6 +45,9 @@ export default function MessagesPage() {
   const [activeCall, setActiveCall] = useState<CallData | null>(null);
   const [isOutgoingCall, setIsOutgoingCall] = useState(false);
   const [isCallButtonDisabled, setIsCallButtonDisabled] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   // Initialize socket.io when the user is available
   useEffect(() => {
@@ -217,18 +220,12 @@ export default function MessagesPage() {
       await initializeSocket(user.uid);
 
       // Local video stream авах
-      const localStream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
-
-      // Local video харуулах
-      const localVideo = document.getElementById(
-        "local-video"
-      ) as HTMLVideoElement;
-      if (localVideo) {
-        localVideo.srcObject = localStream;
-      }
+      setLocalStream(stream);
+      console.log("Local stream acquired for video call");
 
       const callId = await startCall(user.uid, selectedChat, "video");
       console.log("Created call with ID:", callId);
@@ -248,6 +245,7 @@ export default function MessagesPage() {
       console.error("Error starting video call:", error);
       alert("Дуудлага эхлүүлэхэд алдаа гарлаа. Дахин оролдоно уу.");
       setIsCallButtonDisabled(false);
+      setLocalStream(null); // Clear stream on error
     }
   };
 
@@ -261,9 +259,12 @@ export default function MessagesPage() {
       await initializeSocket(user.uid);
 
       // Local audio stream авах
-      const localStream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
+        video: false, // Ensure video is false for audio call
       });
+      setLocalStream(stream);
+      console.log("Local stream acquired for audio call");
 
       const callId = await startCall(user.uid, selectedChat, "audio");
       console.log("Created call with ID:", callId);
@@ -283,11 +284,14 @@ export default function MessagesPage() {
       console.error("Error starting audio call:", error);
       alert("Дуудлага эхлүүлэхэд алдаа гарлаа. Дахин оролдоно уу.");
       setIsCallButtonDisabled(false);
+      setLocalStream(null); // Clear stream on error
     }
   };
 
   const handleCallClose = () => {
     console.log("Closing call modal");
+    localStream?.getTracks().forEach((track) => track.stop()); // Stop local stream tracks
+    setLocalStream(null);
     setActiveCall(null);
     setIsCallButtonDisabled(false);
   };
@@ -362,7 +366,7 @@ export default function MessagesPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1">
                         <div className="flex justify-between items-center">
                           <Link
                             href={`/profile/${chat.userId}`}
@@ -407,7 +411,7 @@ export default function MessagesPage() {
             </div>
           </div>
 
-          <div className="md:col-span-2 flex flex-col">
+          <div className="col-span-2">
             {selectedChat ? (
               <>
                 <div className="p-4 border-b flex items-center justify-between z-50 relative">
@@ -541,38 +545,15 @@ export default function MessagesPage() {
       </main>
 
       {/* Call Modal */}
-      {activeCall && (
+      {activeCall && localStream && (
         <CallModal
           call={activeCall}
           isIncoming={!isOutgoingCall}
           onClose={handleCallClose}
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <div className="relative">
-              <video
-                id="local-video"
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full rounded-lg"
-              />
-              <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded">
-                Та
-              </div>
-            </div>
-            <div className="relative">
-              <video
-                id="remote-video"
-                autoPlay
-                playsInline
-                className="w-full h-full rounded-lg"
-              />
-              <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded">
-                {selectedChatUser?.displayName || "Хэрэглэгч"}
-              </div>
-            </div>
-          </div>
-        </CallModal>
+          localStream={localStream}
+          localVideoRef={localVideoRef}
+          remoteVideoRef={remoteVideoRef}
+        />
       )}
 
       <Footer />
