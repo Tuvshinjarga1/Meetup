@@ -440,7 +440,7 @@ export default function MessagesPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* <div className="flex gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -457,7 +457,7 @@ export default function MessagesPage() {
                     >
                       <VideoIcon className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
